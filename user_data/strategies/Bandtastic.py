@@ -34,7 +34,7 @@ class Bandtastic(IStrategy):
     # Stoploss:
     stoploss = -0.345
 
-    startup_candle_count = 999
+    startup_candle_count = 200
 
     # Trailing stop:
     trailing_stop = True

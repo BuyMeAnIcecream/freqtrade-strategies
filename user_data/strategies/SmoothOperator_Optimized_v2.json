@@ -1,0 +1,43 @@
+{
+  "strategy_name": "SmoothOperator_Optimized_v2",
+  "params": {
+    "trailing": {
+      "trailing_stop": false,
+      "trailing_stop_positive": null,
+      "trailing_stop_positive_offset": 0.0,
+      "trailing_only_offset_is_reached": false
+    },
+    "max_open_trades": {
+      "max_open_trades": 3
+    },
+    "buy": {
+      "cci_oversold": -198,
+      "mfi_oversold": 15,
+      "rsi_oversold": 29,
+      "sma_fast_period": 49,
+      "sma_medium_period": 101,
+      "sma_slow_period": 180
+    },
+    "sell": {
+      "bullish_threshold": 1.044,
+      "cci_overbought": 197,
+      "exit_cci_threshold": 187,
+      "exit_mfi_threshold": 85,
+      "exit_rsi_threshold": 80,
+      "mfi_overbought": 73,
+      "rsi_overbought": 76
+    },
+    "protection": {},
+    "roi": {
+      "0": 0.146,
+      "37": 0.1,
+      "55": 0.036,
+      "158": 0
+    },
+    "stoploss": {
+      "stoploss": -0.061
+    }
+  },
+  "ft_stratparam_v": 1,
+  "export_time": "2025-08-02 06:06:36.276026+00:00"
+}
