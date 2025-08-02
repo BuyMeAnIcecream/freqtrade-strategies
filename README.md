@@ -119,10 +119,9 @@ freqtrade trade --config config_binance_production.json --strategy SmoothOperato
 
 ## 📚 **Documentation**
 
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete deployment guide
-- **[QUICK_START.md](QUICK_START.md)** - 5-minute quick start
-- **[SMOOTHOPERATOR_OPTIMIZATION_COMPLETE_RESULTS.md](SMOOTHOPERATOR_OPTIMIZATION_COMPLETE_RESULTS.md)** - Detailed optimization results
-- **[DAY_TRADING_STRATEGIES_COMPLETE_ANALYSIS.md](DAY_TRADING_STRATEGIES_COMPLETE_ANALYSIS.md)** - Day trading strategy analysis
+- **[STRATEGY_GUIDE.md](STRATEGY_GUIDE.md)** - Comprehensive strategy analysis and optimization results
+- **[DEPLOYMENT_GUIDE_COMPLETE.md](DEPLOYMENT_GUIDE_COMPLETE.md)** - Complete deployment and setup guide
+- **[README.md](README.md)** - Project overview and features
 
 ## 🎯 **Key Features**
 
