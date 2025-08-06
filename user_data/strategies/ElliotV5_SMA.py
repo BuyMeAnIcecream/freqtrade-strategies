@@ -15,11 +15,11 @@ from freqtrade.strategy import stoploss_from_open, merge_informative_pair, Decim
 import technical.indicators as ftt
 
 buy_params = {
-      "base_nb_candles_buy": 17,
-      "ewo_high": 3.34,
-      "ewo_low": -17.457,
-      "low_offset": 0.978,
-      "rsi_buy": 65
+      "base_nb_candles_buy": 25,
+      "ewo_high": 2.5,
+      "ewo_low": -15.0,
+      "low_offset": 0.95,
+      "rsi_buy": 55
     }
 
 sell_params = {
