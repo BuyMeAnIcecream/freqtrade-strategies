@@ -34,6 +34,7 @@ class BacktestGUI:
         
         self.setup_ui()
         self.load_strategies()
+        self.load_configs()
         
     def setup_ui(self):
         # Main frame
@@ -56,15 +57,8 @@ class BacktestGUI:
         
         # Config file selection
         ttk.Label(main_frame, text="Config File:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        config_frame = ttk.Frame(main_frame)
-        config_frame.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
-        config_frame.columnconfigure(0, weight=1)
-        
-        self.config_entry = ttk.Entry(config_frame, textvariable=self.config_file_var)
-        self.config_entry.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 5))
-        
-        config_button = ttk.Button(config_frame, text="Browse", command=self.browse_config)
-        config_button.grid(row=0, column=1)
+        self.config_combo = ttk.Combobox(main_frame, textvariable=self.config_file_var, state="readonly", width=40)
+        self.config_combo.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         
         # Timeframe selection
         ttk.Label(main_frame, text="Timeframe:").grid(row=3, column=0, sticky=tk.W, pady=5)
@@ -156,6 +150,34 @@ class BacktestGUI:
         if strategies:
             self.strategy_combo.set(strategies[0])
     
+    def load_configs(self):
+        """Load available config files from the current directory"""
+        configs = []
+        
+        # Look for JSON files in current directory
+        for file in glob.glob("*.json"):
+            if file.endswith(".json"):
+                configs.append(file)
+        
+        # Also look in user_data directory if it exists
+        user_data_path = "user_data"
+        if os.path.exists(user_data_path):
+            for file in glob.glob(os.path.join(user_data_path, "*.json")):
+                if file.endswith(".json"):
+                    configs.append(file)
+        
+        self.config_combo['values'] = sorted(configs)
+        if configs:
+            # Try to set a default config file
+            default_configs = ["config_dip_testing.json", "config.json", "config_binance_production.json"]
+            for default in default_configs:
+                if default in configs:
+                    self.config_combo.set(default)
+                    break
+            else:
+                # If no default found, set the first one
+                self.config_combo.set(configs[0])
+    
     def browse_config(self):
         """Browse for config file"""
         filename = filedialog.askopenfilename(
@@ -230,10 +252,7 @@ class BacktestGUI:
             self.show_error_in_status("Start date must be before end date")
             return False
         
-        if not self.output_folder_var.get():
-            self.show_error_in_status("Please select an output folder")
-            return False
-        
+        # Output folder is optional
         return True
     
     def run_backtest(self):
