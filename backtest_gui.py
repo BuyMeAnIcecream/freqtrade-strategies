@@ -109,6 +109,10 @@ class BacktestGUI:
         run_button = ttk.Button(button_frame, text="Run Backtest", command=self.run_backtest)
         run_button.pack(side=tk.LEFT, padx=5)
         
+        # Run & View Report button
+        run_view_button = ttk.Button(button_frame, text="Run & View Report", command=self.run_backtest_and_view)
+        run_view_button.pack(side=tk.LEFT, padx=5)
+        
         # Download data button
         download_button = ttk.Button(button_frame, text="Download Data", command=self.download_data)
         download_button.pack(side=tk.LEFT, padx=5)
@@ -275,11 +279,81 @@ class BacktestGUI:
                 # Store the output for viewing
                 self.last_backtest_output = result.stdout
                 # Use non-blocking message
-                self.show_non_blocking_message("Success", "Backtest completed successfully! Click 'View Report' to see results.")
+                self.show_non_blocking_message("Success", "Backtest completed successfully!")
                 
                 # Show output folder if specified
                 if self.output_folder_var.get():
                     self.show_non_blocking_message("Output", f"Results saved to: {self.output_folder_var.get()}")
+            else:
+                error_msg = result.stderr if result.stderr else result.stdout if result.stdout else "Unknown error occurred"
+                self.status_label.config(text="Backtest failed")
+                # Store error output for viewing
+                self.last_backtest_output = f"ERROR:\n{error_msg}"
+                # Show error in status instead of blocking dialog
+                self.show_error_in_status(f"Backtest failed: {error_msg[:200]}...")
+                
+        except subprocess.TimeoutExpired:
+            self.status_label.config(text="Backtest timed out (5 minutes)")
+            self.show_error_in_status("Backtest timed out after 5 minutes")
+        except Exception as e:
+            self.status_label.config(text="Backtest failed")
+            self.show_error_in_status(f"Failed to run backtest: {str(e)}")
+        
+        finally:
+            self.progress.stop()
+    
+    def run_backtest_and_view(self):
+        """Run backtest and automatically open report on success"""
+        if not self.validate_inputs():
+            return
+        
+        # Prepare command
+        timerange = f"{self.start_date_var.get()}-{self.end_date_var.get()}"
+        
+        cmd = [
+            "freqtrade", "backtesting",
+            "--config", self.config_file_var.get(),
+            "--strategy", self.strategy_var.get(),
+            "--timerange", timerange,
+            "--timeframe", self.timeframe_var.get()
+        ]
+        
+        # Add output folder if specified
+        if self.output_folder_var.get():
+            output_folder = self.output_folder_var.get()
+            if not os.path.exists(output_folder):
+                os.makedirs(output_folder)
+            
+            # Create timestamp for unique filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            strategy_name = self.strategy_var.get()
+            output_file = os.path.join(output_folder, f"backtest_{strategy_name}_{timestamp}.json")
+            
+            cmd.extend(["--export", "trades", "--export-filename", output_file])
+        
+        # Update UI
+        self.status_label.config(text="Running backtest...")
+        self.progress.start()
+        self.root.update()
+        
+        try:
+            # Run the command
+            result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.getcwd(), timeout=300)  # 5 minute timeout
+            
+            if result.returncode == 0:
+                self.status_label.config(text="Backtest completed successfully!")
+                # Store the output for viewing
+                self.last_backtest_output = result.stdout
+                # Show success message
+                self.show_non_blocking_message("Success", "Backtest completed successfully! Opening report...")
+                
+                # Show output folder if specified
+                if self.output_folder_var.get():
+                    self.show_non_blocking_message("Output", f"Results saved to: {self.output_folder_var.get()}")
+                
+                # Automatically open the report after a short delay
+                self.root.after(1000, self.view_report)
+                
             else:
                 error_msg = result.stderr if result.stderr else result.stdout if result.stdout else "Unknown error occurred"
                 self.status_label.config(text="Backtest failed")
