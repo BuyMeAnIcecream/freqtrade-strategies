@@ -25,7 +25,7 @@ class DipBuyingStrategy(IStrategy):
     }
 
     # Optimal stoploss designed for the strategy
-    stoploss = -0.05  # 5% stop loss as safety net
+    stoploss = -0.09  # 5% stop loss as safety net
 
     # Optimal timeframe for the strategy - 15 minutes is good balance
     timeframe = '15m'
@@ -39,7 +39,7 @@ class DipBuyingStrategy(IStrategy):
     ignore_roi_if_entry_signal = False
 
     # Number of candles the strategy requires before producing valid signals
-    startup_candle_count: int = 20
+    startup_candle_count: int = 15
 
     # Strategy parameters
     dip_threshold = DecimalParameter(0.015, 0.025, default=0.04, space="buy", decimals=3)
