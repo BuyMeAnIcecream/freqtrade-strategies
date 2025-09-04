@@ -58,7 +58,8 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
     }
 
     # Stoploss - more appropriate for crypto volatility
-    stoploss = -0.35  # 8% stop loss
+    stoploss = -0.90  # 90% stop loss - effectively disabled (let ROI and trailing stop handle exits)
+    use_custom_stoploss = False  # Disable custom stoploss to avoid regime-based exits
 
     # Disable shorting for spot trading
     can_short = False
@@ -79,10 +80,10 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
     rsi_window = IntParameter(10, 15, default=12, space="buy")
     rsi_overbought_high = IntParameter(75, 85, default=78, space="sell")
     rsi_overbought_medium = IntParameter(70, 80, default=72, space="sell")
-    rsi_oversold = IntParameter(25, 35, default=28, space="buy")
+    rsi_oversold = IntParameter(20, 40, default=35, space="buy")  # Relaxed from 28 to 35
     
     # Volume confirmation
-    volume_multiplier = DecimalParameter(1.2, 2.5, default=1.5, space="buy")
+    volume_multiplier = DecimalParameter(1.0, 2.0, default=1.2, space="buy")  # Relaxed from 1.5 to 1.2
     
     # Position sizing parameters
     max_risk_per_trade = DecimalParameter(0.02, 0.08, default=0.05, space="buy")
@@ -90,6 +91,7 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
     aggressive_allocation = DecimalParameter(0.6, 0.9, default=0.8, space="buy")
 
     # Exit signal parameters - easily editable
+    enable_exit_signals = False  # Set to False to disable exit signals (main source of losses)
     exit_rsi_threshold = 92  # RSI level for exit (higher = less exits)
     exit_trend_drop = 0.88  # Price drop below SMA20 for trend exit (lower = less exits)
     exit_extreme_drop = 0.80  # Extreme price drop for exit (lower = less exits)
@@ -97,6 +99,7 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
     exit_candle_drop = 0.85  # Intra-candle drop for volume spike exit (lower = less exits)
     
     # Regime change exit parameters - reduce these to minimize regime change losses
+    enable_regime_exits = False  # Set to False to disable regime change exits (bleeding the most)
     regime_exit_profit_threshold = 0.12  # Exit defensive positions when aggressive (higher = less exits)
     regime_exit_loss_threshold = -0.20  # Exit aggressive positions when defensive (lower = less exits)
     
@@ -257,10 +260,10 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
         )
         
         # Defensive mode: When major pairs are overbought, prefer stable pairs
-        defensive_mode = overbought_count >= 2  # Reduced from 3 to 2
+        defensive_mode = overbought_count >= 1  # Relaxed from 2 to 1
         
         # Aggressive mode: When many pairs are oversold, prefer volatile pairs
-        aggressive_mode = oversold_count >= 2
+        aggressive_mode = oversold_count >= 1  # Relaxed from 2 to 1
         
         # Entry logic with pair-specific conditions
         if metadata['pair'] in ['BTC/USDT', 'ETH/USDT', 'BNB/USDT']:
@@ -269,15 +272,14 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
                 # Defensive entry for stable pairs
                 defensive_entry = (
                     base_condition &
-                    (dataframe['volume_ratio'] > 1.1)  # Lower volume requirement
+                    (dataframe['volume_ratio'] > 0.8)  # Relaxed from 1.1 to 0.8
                 )
                 long_conditions.append(defensive_entry)
             else:
                 # Normal entry for stable pairs
                 stable_entry = (
                     base_condition &
-                    (dataframe['bullish_trend']) &
-                    (dataframe['volume_ratio'] > 1.2)
+                    (dataframe['volume_ratio'] > 0.9)  # Relaxed from 1.2 to 0.9
                 )
                 long_conditions.append(stable_entry)
         
@@ -287,16 +289,14 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
                 # Aggressive entry for volatile pairs
                 aggressive_entry = (
                     base_condition &
-                    (dataframe['bullish_trend']) &
-                    (dataframe['volume_ratio'] > self.volume_multiplier.value)
+                    (dataframe['volume_ratio'] > 1.0)  # Relaxed from volume_multiplier to 1.0
                 )
                 long_conditions.append(aggressive_entry)
             else:
                 # Normal entry for volatile pairs
                 volatile_entry = (
                     base_condition &
-                    (dataframe['bullish_trend']) &
-                    (dataframe['volume_ratio'] > 1.3)
+                    (dataframe['volume_ratio'] > 1.0)  # Relaxed from 1.3 to 1.0
                 )
                 long_conditions.append(volatile_entry)
         
@@ -304,8 +304,7 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
             # Other pairs - balanced approach
             balanced_entry = (
                 base_condition &
-                (dataframe['bullish_trend']) &
-                (dataframe['volume_ratio'] > 1.2)
+                (dataframe['volume_ratio'] > 0.9)  # Relaxed from 1.2 to 0.9
             )
             long_conditions.append(balanced_entry)
         
@@ -319,6 +318,12 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
         """
         Exit logic - conservative exit signals that work with ROI and trailing stop
         """
+        
+        # Disable exit signals if parameter is False
+        if not self.enable_exit_signals:
+            dataframe['exit_long'] = 0
+            dataframe['exit_short'] = 0
+            return dataframe
         
         # Exit long positions - only on very strong reversal signals
         # This should be much less frequent than ROI/trailing stop exits
@@ -366,6 +371,13 @@ class CryptoKMLMSwitcherAdvanced(IStrategy):
         """
         Custom exit logic based on market regime changes - less aggressive
         """
+        # Disable regime exits if parameter is False
+        if not self.enable_regime_exits:
+            # Only check timeout if regime exits are disabled
+            if self.enable_trade_timeout and (current_time - trade.open_date_utc).total_seconds() > (self.trade_timeout_hours * 3600):
+                return "timeout_exit"
+            return None
+        
         # Get the dataframe for this pair
         dataframe, _ = self.dp.get_analyzed_dataframe(pair, self.timeframe)
         
